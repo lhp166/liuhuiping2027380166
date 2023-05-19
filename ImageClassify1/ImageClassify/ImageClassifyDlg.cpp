@@ -7,6 +7,9 @@
 #include "ImageClassify.h"
 #include "ImageClassifyDlg.h"
 #include "afxdialogex.h"
+#include <string>
+#include "TaskManager.h"
+
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -53,7 +56,7 @@ END_MESSAGE_MAP()
 CImageClassifyDlg::CImageClassifyDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_IMAGECLASSIFY_DIALOG, pParent)
 {
-	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+	m_hIcon = AfxGetApp()->LoadIcon(IDI_ICON1);
 }
 
 void CImageClassifyDlg::DoDataExchange(CDataExchange* pDX)
@@ -65,6 +68,11 @@ BEGIN_MESSAGE_MAP(CImageClassifyDlg, CDialogEx)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
+	ON_BN_CLICKED(IDC_BUTTON_SINGLE, &CImageClassifyDlg::OnBnClickedButtonSingle)
+	ON_BN_CLICKED(IDC_BUTTON_START_SINGLE, &CImageClassifyDlg::OnBnClickedButtonStartSingle)
+	ON_BN_CLICKED(IDC_BUTTON_DIR, &CImageClassifyDlg::OnBnClickedButtonDir)
+	ON_BN_CLICKED(IDC_BUTTON_START_DIR, &CImageClassifyDlg::OnBnClickedButtonStartDir)
+	ON_EN_CHANGE(IDC_EDIT_NORMALLIGHT_DIR, &CImageClassifyDlg::OnEnChangeEditNormallightDir)
 END_MESSAGE_MAP()
 
 
@@ -99,6 +107,7 @@ BOOL CImageClassifyDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// 设置大图标
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
+	m_oFont.CreatePointFont(150, _T("宋体"));
 	// TODO: 在此添加额外的初始化代码
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
@@ -153,3 +162,115 @@ HCURSOR CImageClassifyDlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
+
+
+void CImageClassifyDlg::OnBnClickedButtonSingle()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	CString OpenFilter = _T("图片文件(*.*)|*.*|");
+
+	CFileDialog FileOpen(TRUE, NULL, NULL, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, OpenFilter);
+	if (IDOK == FileOpen.DoModal())
+	{
+		CString PathName = FileOpen.GetPathName();
+		GetDlgItem(IDC_EDIT_SINGLE)->SetWindowTextW(PathName);
+		GetDlgItem(IDC_EDIT_SINGLE)->SetFont(&m_oFont);
+	}
+
+}
+
+
+void CImageClassifyDlg::OnBnClickedButtonStartSingle()
+{
+	// TODO: 在此添加控件通知处理程序代码
+
+	//文本框读取
+	CString  strSourceFile;
+	CEdit* pEditSourceFile = (CEdit*)GetDlgItem(IDC_EDIT_SINGLE);
+	if (pEditSourceFile)
+	{
+		pEditSourceFile->GetWindowText(strSourceFile);
+	}
+
+	//分类
+	CTaskManager* pManager = new CTaskManager;
+	IMAGE_TYPE type = pManager->AddTask(strSourceFile.GetBuffer());
+
+	CEdit* pEditResult = (CEdit*)GetDlgItem(IDC_EDIT_RESULT_SINGLE);
+	if (type == NORMAL_IMAGE)
+	{
+		pEditResult->SetWindowText(L"正常");
+	}else if (type == AG_IMAGE)
+	{
+		pEditResult->SetWindowText(L"暗光");
+	}
+	else if (type == NG_IMAGE)
+	{
+		pEditResult->SetWindowText(L"逆光");
+	}
+	else if (type == FG_IMAGE)
+	{
+		pEditResult->SetWindowText(L"反光");
+	}
+}
+
+
+void CImageClassifyDlg::OnBnClickedButtonDir()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	TCHAR szBuffer[MAX_PATH] = { 0 };
+	BROWSEINFO bi;
+	ZeroMemory(&bi, sizeof(BROWSEINFO));
+	bi.hwndOwner = NULL;
+	bi.pszDisplayName = szBuffer;
+	bi.lpszTitle = _T("从下面选文件夹目录:");
+	bi.ulFlags = BIF_RETURNFSANCESTORS; //BIF_BROWSEINCLUDEFILES
+	LPITEMIDLIST idl = SHBrowseForFolder(&bi);
+	if (NULL == idl)
+	{
+		return;
+	}
+	SHGetPathFromIDList(idl, szBuffer);
+	if (szBuffer)
+	{
+		std::wstring strFilePath = szBuffer;
+
+		//文本框写入
+		CEdit* pEditSourceFileDir = (CEdit*)GetDlgItem(IDC_EDIT_DIR);
+		if (pEditSourceFileDir)
+		{
+			pEditSourceFileDir->SetWindowText(szBuffer);
+			pEditSourceFileDir->SetFont(&m_oFont);
+		}
+	}
+
+
+}
+
+
+void CImageClassifyDlg::OnBnClickedButtonStartDir()
+{
+	// TODO: 在此添加控件通知处理程序代码
+
+	//文本框读取
+	CString  strSourceDir;
+	CEdit* pEditSourceDir = (CEdit*)GetDlgItem(IDC_EDIT_DIR);
+	if (pEditSourceDir)
+	{
+		pEditSourceDir->GetWindowText(strSourceDir);
+	}
+	//分类
+	CTaskManager* pManager = new CTaskManager;
+	pManager->AddTask(strSourceDir.GetBuffer());
+}
+
+
+void CImageClassifyDlg::OnEnChangeEditNormallightDir()
+{
+	// TODO:  如果该控件是 RICHEDIT 控件，它将不
+	// 发送此通知，除非重写 CDialogEx::OnInitDialog()
+	// 函数并调用 CRichEditCtrl().SetEventMask()，
+	// 同时将 ENM_CHANGE 标志“或”运算到掩码中。
+
+	// TODO:  在此添加控件通知处理程序代码
+}

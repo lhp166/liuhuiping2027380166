@@ -31,4 +31,13 @@ protected:
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
+public:
+	afx_msg void OnBnClickedButtonSingle();
+	afx_msg void OnBnClickedButtonStartSingle();
+	afx_msg void OnBnClickedButtonDir();
+	afx_msg void OnBnClickedButtonStartDir();
+private:
+	CFont m_oFont;
+public:
+	afx_msg void OnEnChangeEditNormallightDir();
 };

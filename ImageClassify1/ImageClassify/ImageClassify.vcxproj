@@ -214,7 +214,10 @@
     <None Include="res\ImageClassify.rc2" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="..\..\..\..\电脑文件资料\证件照\2.jpg" />
+    <Image Include="res\2.ico" />
     <Image Include="res\ImageClassify.ico" />
+    <Image Include="res\ImageClassify1.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
