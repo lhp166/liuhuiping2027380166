@@ -193,8 +193,8 @@ void CImageClassifyDlg::OnBnClickedButtonStartSingle()
 	}
 
 	//分类
-	CTaskManager* pManager = new CTaskManager;
-	IMAGE_TYPE type = pManager->AddTask(strSourceFile.GetBuffer());
+	IMAGE_TYPE type = CTaskManager::GetInstance()->AddTask(strSourceFile.GetBuffer());
+
 
 	CEdit* pEditResult = (CEdit*)GetDlgItem(IDC_EDIT_RESULT_SINGLE);
 	if (type == NORMAL_IMAGE)
