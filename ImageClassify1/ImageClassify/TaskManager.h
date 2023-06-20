@@ -2,7 +2,7 @@
 #include <string>
 #include <map>
 #include <vector>
-#include "IDataCallback.h"
+#include "IIpcCallback.h"
 
 enum IMAGE_TYPE
 {
@@ -12,20 +12,21 @@ enum IMAGE_TYPE
 	AG_IMAGE 
 };
 
-class CTaskManager : public IDataCallback
+class CTaskManager : public IIpcCallback
 {
 public:
 	CTaskManager();
 	~CTaskManager();
 	static CTaskManager* GetInstance();
 
-	void Init();
-	IMAGE_TYPE AddTask(std::wstring strFilePath);
-	void AddDirTask(std::wstring strDirPath);
+	void Init(HWND hWnd);
+	string UnicodeToUTF8(const wchar_t* src);
+	IMAGE_TYPE RunTask(std::wstring strFilePath);
+	void RunDirTask(std::wstring strDirPath);
 
 	void ProcessTask();
 
-	virtual void OnDataCallback(std::string strData) override;
+	virtual void OnDataCallback(char* pData, DWORD dwLength) override;
 private:
 	int m_nNums = 0;
 
@@ -33,5 +34,7 @@ private:
 
 	std::map<std::wstring, int>  m_mapResult;
 	std::vector<std::wstring>  m_vecTasks;
+
+	HWND m_hWnd;
 };
 

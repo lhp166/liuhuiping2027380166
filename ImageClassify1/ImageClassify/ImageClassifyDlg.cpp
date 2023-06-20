@@ -9,6 +9,7 @@
 #include "afxdialogex.h"
 #include <string>
 #include "TaskManager.h"
+#include <corecrt_io.h>
 
 
 #ifdef _DEBUG
@@ -73,10 +74,46 @@ BEGIN_MESSAGE_MAP(CImageClassifyDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_DIR, &CImageClassifyDlg::OnBnClickedButtonDir)
 	ON_BN_CLICKED(IDC_BUTTON_START_DIR, &CImageClassifyDlg::OnBnClickedButtonStartDir)
 	ON_EN_CHANGE(IDC_EDIT_NORMALLIGHT_DIR, &CImageClassifyDlg::OnEnChangeEditNormallightDir)
+	ON_MESSAGE(EVENT_IMAGE_CLASSIFY_FINISHED, OnImageClassifyFinished)
+	ON_EN_CHANGE(IDC_EDIT_REFLECTIVE_NUMS, &CImageClassifyDlg::OnEnChangeEditReflectiveNums)
 END_MESSAGE_MAP()
 
 
 // CImageClassifyDlg 消息处理程序
+
+std::string UnicodeToAnsi(const wchar_t* src)
+{
+	if (src == NULL || src[0] == '\0')
+	{
+		return "";
+	}
+
+	wstring strSrc(src);
+	int length = WideCharToMultiByte(CP_ACP, 0, strSrc.c_str(),
+		-1, NULL, 0, NULL, FALSE);
+	char* buf = new char[length + 1];
+	WideCharToMultiByte(CP_ACP, 0, strSrc.c_str(), -1, buf, length, NULL, FALSE);
+	buf[length] = '\0';
+	string dest = buf;
+	delete[] buf;
+	return dest;
+}
+
+wstring UTF8ToUnicode(const char* src)
+{
+	if (src == NULL || src[0] == '\0')
+	{
+		return L"";
+	}
+	string strSrc(src);
+	int length = MultiByteToWideChar(CP_UTF8, 0, strSrc.c_str(), -1, NULL, 0);
+	wchar_t* buf = new wchar_t[length + 1];
+	MultiByteToWideChar(CP_UTF8, 0, strSrc.c_str(), -1, buf, length);
+	buf[length] = L'\0';
+	wstring dest = buf;
+	delete[] buf;
+	return dest;
+}
 
 BOOL CImageClassifyDlg::OnInitDialog()
 {
@@ -110,6 +147,7 @@ BOOL CImageClassifyDlg::OnInitDialog()
 	m_oFont.CreatePointFont(150, _T("宋体"));
 	// TODO: 在此添加额外的初始化代码
 
+	CTaskManager::GetInstance()->Init(AfxGetMainWnd()->m_hWnd);
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
@@ -166,6 +204,7 @@ HCURSOR CImageClassifyDlg::OnQueryDragIcon()
 
 void CImageClassifyDlg::OnBnClickedButtonSingle()
 {
+	m_mapClassNums.clear();
 	// TODO: 在此添加控件通知处理程序代码
 	CString OpenFilter = _T("图片文件(*.*)|*.*|");
 
@@ -176,6 +215,7 @@ void CImageClassifyDlg::OnBnClickedButtonSingle()
 		GetDlgItem(IDC_EDIT_SINGLE)->SetWindowTextW(PathName);
 		GetDlgItem(IDC_EDIT_SINGLE)->SetFont(&m_oFont);
 	}
+
 
 }
 
@@ -193,9 +233,9 @@ void CImageClassifyDlg::OnBnClickedButtonStartSingle()
 	}
 
 	//分类
-	IMAGE_TYPE type = CTaskManager::GetInstance()->AddTask(strSourceFile.GetBuffer());
+	CTaskManager::GetInstance()->RunTask(strSourceFile.GetBuffer());
 
-
+	/*
 	CEdit* pEditResult = (CEdit*)GetDlgItem(IDC_EDIT_RESULT_SINGLE);
 	if (type == NORMAL_IMAGE)
 	{
@@ -212,6 +252,7 @@ void CImageClassifyDlg::OnBnClickedButtonStartSingle()
 	{
 		pEditResult->SetWindowText(L"反光");
 	}
+	*/
 }
 
 
@@ -248,9 +289,72 @@ void CImageClassifyDlg::OnBnClickedButtonDir()
 }
 
 
+void GetFilePathsByDir(std::wstring wsDir, std::vector<std::wstring>& files)
+{
+	size_t pos = wsDir.find_last_of(L"/\\");
+	int nEnd = wsDir.length() - 1;
+	if (pos != nEnd)
+	{
+		wsDir = wsDir + L"\\";
+	}
+	//文件句柄  
+	//long   hFile = 0;
+	intptr_t hFile = 0;
+	//文件信息  
+	struct _wfinddata_t file_info;
+	wstring p;
+	if ((hFile = _wfindfirst(p.assign(wsDir).append(L"*").c_str(), &file_info)) != -1)
+	{
+		do
+		{
+			//如果是目录,迭代之  
+			//如果不是,加入列表  
+			if ((file_info.attrib & _A_SUBDIR))
+			{
+				if (wcscmp(file_info.name, L".") != 0 && wcscmp(file_info.name, L"..") != 0)
+				{
+					GetFilePathsByDir(p.assign(wsDir).append(file_info.name), files);
+				}
+			}
+			else
+			{
+				files.push_back(p.assign(wsDir).append(file_info.name));
+			}
+
+		} while (_wfindnext(hFile, &file_info) == 0);
+
+		_findclose(hFile);
+	}
+}
+
+DWORD WINAPI ThreadStartClassifyDir(LPVOID lpParam)
+{
+	CString strPath = *(CString*)lpParam;
+
+	std::vector<std::wstring> vecSourceImages;
+	GetFilePathsByDir(strPath.GetBuffer(), vecSourceImages);
+
+	int nImageNum = vecSourceImages.size();
+	if (nImageNum == 0)
+	{
+		//::MessageBox(NULL, L"空目录", L"提示", MB_OK);
+		return 0;
+	}
+
+	for (auto strImagePath : vecSourceImages)
+	{
+		//string strPath = UnicodeToAnsi(strImagePath.c_str());
+		CTaskManager::GetInstance()->RunTask(strImagePath);
+
+		Sleep(50);
+	}
+
+}
+
 void CImageClassifyDlg::OnBnClickedButtonStartDir()
 {
 	// TODO: 在此添加控件通知处理程序代码
+	m_mapClassNums.clear();
 
 	//文本框读取
 	CString  strSourceDir;
@@ -259,13 +363,101 @@ void CImageClassifyDlg::OnBnClickedButtonStartDir()
 	{
 		pEditSourceDir->GetWindowText(strSourceDir);
 	}
+
+	CString* pTemp = new CString(strSourceDir);
+	CreateThread(NULL, 0, ThreadStartClassifyDir, pTemp, 0, NULL);
 	//分类
-	CTaskManager* pManager = new CTaskManager;
-	pManager->AddTask(strSourceDir.GetBuffer());
+	//CTaskManager::GetInstance()->RunDirTask(strSourceDir.GetBuffer());
 }
 
 
 void CImageClassifyDlg::OnEnChangeEditNormallightDir()
+{
+	// TODO:  如果该控件是 RICHEDIT 控件，它将不
+	// 发送此通知，除非重写 CDialogEx::OnInitDialog()
+	// 函数并调用 CRichEditCtrl().SetEventMask()，
+	// 同时将 ENM_CHANGE 标志“或”运算到掩码中。
+
+	// TODO:  在此添加控件通知处理程序代码
+}
+
+afx_msg LRESULT CImageClassifyDlg::OnImageClassifyFinished(WPARAM wParam, LPARAM lParam)
+{
+	string strClass = *(string*)lParam;
+
+
+	CEdit* pEditResult = (CEdit*)GetDlgItem(IDC_EDIT_RESULT_SINGLE);
+	if (strClass == "normal")
+	{
+		int nNums = m_mapClassNums["normal"];
+		nNums++;
+		m_mapClassNums["normal"] = nNums;
+
+		pEditResult->SetWindowText(L"正常");
+	}
+	else if (strClass == "dark")
+	{
+		int nNums = m_mapClassNums["dark"];
+		nNums++;
+		m_mapClassNums["dark"] = nNums;
+
+		pEditResult->SetWindowText(L"暗光");
+	}
+	else if (strClass == "backlight")
+	{
+		int nNums = m_mapClassNums["backlight"];
+		nNums++;
+		m_mapClassNums["backlight"] = nNums;
+		pEditResult->SetWindowText(L"逆光");
+	}
+	else if (strClass == "reflect")
+	{
+		int nNums = m_mapClassNums["reflect"];
+		nNums++;
+		m_mapClassNums["reflect"] = nNums;
+		pEditResult->SetWindowText(L"反光");
+	}
+
+	//正常
+	int nNums = m_mapClassNums["normal"];
+
+	CString strTemp;
+	strTemp.Format(_T("%d"), nNums);
+
+	CEdit* pEditNums = (CEdit*)GetDlgItem(IDC_EDIT_NORMAL_NUMS);
+	pEditNums->SetWindowText(strTemp);
+
+	//暗光
+	nNums = m_mapClassNums["dark"];
+
+	strTemp.Format(_T("%d"), nNums);
+
+	pEditNums = (CEdit*)GetDlgItem(IDC_EDIT_DARK_NUMS);
+	pEditNums->SetWindowText(strTemp);
+
+	//逆光
+	nNums = m_mapClassNums["backlight"];
+
+	strTemp.Format(_T("%d"), nNums);
+
+	pEditNums = (CEdit*)GetDlgItem(IDC_EDIT_BACKLINGHTING_NUMS);
+	pEditNums->SetWindowText(strTemp);
+
+	//反光
+	nNums = m_mapClassNums["reflect"];
+
+	strTemp.Format(_T("%d"),nNums);
+
+	pEditNums = (CEdit*)GetDlgItem(IDC_EDIT_REFLECTIVE_NUMS);
+	pEditNums->SetWindowText(strTemp);
+
+
+
+	return 0;
+}
+
+
+void CImageClassifyDlg::OnEnChangeEditReflectiveNums()
 {
 	// TODO:  如果该控件是 RICHEDIT 控件，它将不
 	// 发送此通知，除非重写 CDialogEx::OnInitDialog()

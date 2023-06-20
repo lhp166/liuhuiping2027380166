@@ -17,9 +17,13 @@
 #define IDC_EDIT3                       1006
 #define IDC_EDIT_RESULT_SINGLE          1006
 #define IDC_EDIT_BACKLINGHTING_DIR      1007
+#define IDC_EDIT_BACKLINGHTING_NUMS     1007
 #define IDC_EDIT_NORMALLIGHT_DIR        1008
+#define IDC_EDIT_NORMAL_NUMS            1008
 #define IDC_EDIT_REFLECTIVE_DIR         1009
+#define IDC_EDIT_REFLECTIVE_NUMS        1009
 #define IDC_EDIT_DIMLIGHT_DIR           1010
+#define IDC_EDIT_DARK_NUMS              1010
 #define IDC_STATIC_SINGLE               1011
 #define IDC_STATIC_DIR                  1012
 

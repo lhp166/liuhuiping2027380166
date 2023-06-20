@@ -42,7 +42,7 @@
     <ClInclude Include="IpcClient.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="IDataCallback.h">
+    <ClInclude Include="IIpcCallback.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

@@ -11,3 +11,9 @@
 #include "framework.h"
 
 #endif //PCH_H
+
+enum USER_EVENT
+{
+	EVENT_IMAGE_CLASSIFY_FINISHED = WM_USER + 5001,
+	EVENT_IMAGE_ENHANCE_FINISHED = WM_USER + 5002,
+};

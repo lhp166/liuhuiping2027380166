@@ -3,8 +3,10 @@
 //
 
 #pragma once
+#include <map>
+#include <string>
 
-
+using namespace std;
 // CImageClassifyDlg 对话框
 class CImageClassifyDlg : public CDialogEx
 {
@@ -40,4 +42,9 @@ private:
 	CFont m_oFont;
 public:
 	afx_msg void OnEnChangeEditNormallightDir();
+	afx_msg LRESULT OnImageClassifyFinished(WPARAM wParam, LPARAM lParam);
+private:
+	std::map<std::string, int> m_mapClassNums;
+public:
+	afx_msg void OnEnChangeEditReflectiveNums();
 };
